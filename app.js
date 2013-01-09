@@ -4,9 +4,8 @@
  */
 
 var express = require('express'),
-    routes  = require('./routes'),
-    redis   = require('redis'),
-    publisherClient = redis.createClient();
+    routes  = require('./routes');
+var prozess = require('prozess');
 
 var app = module.exports = express.createServer();
 
@@ -22,11 +21,11 @@ app.configure(function(){
 });
 
 app.configure('development', function(){
-  app.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
+  app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
 });
 
 app.configure('production', function(){
-  app.use(express.errorHandler()); 
+  app.use(express.errorHandler());
 });
 
 // Routes
@@ -40,13 +39,27 @@ app.get('/update-stream', function(req, res) {
   req.socket.setTimeout(Infinity);
 
   var messageCount = 0;
-  var subscriber = redis.createClient();
 
-  subscriber.subscribe("updates");
+  var options = {
+    host : 'localhost',
+    topic : 'syslog',
+    partition : 0,
+    offset : 0,
+    interval: 1000
+  };
 
+  // TODO: Create one EventEmitter per connected browser?!
+  // Should be one per process
+  var subscriber = new prozess.EventEmitter(options);
+
+  console.log("New incoming subscriber");
+
+  subscriber.on("connected", function() {
+    console.log('subscriber connected');
+  });
   // In case we encounter an error...print it out to the console
   subscriber.on("error", function(err) {
-    console.log("Redis Error: " + err);
+    console.log("subscriber Error: " + err);
   });
 
   // When we receive a message from the redis connection
@@ -75,12 +88,15 @@ app.get('/update-stream', function(req, res) {
   });
 });
 
-app.get('/fire-event/:event_name', function(req, res) {
-  publisherClient.publish( 'updates', ('"' + req.params.event_name + '" page visited') );
-  res.writeHead(200, {'Content-Type': 'text/html'});
-  res.write('All clients have received "' + req.params.event_name + '"');
-  res.end();
-});
-
+// TODO: original example also enable clients to publish between themselves
+// app.get('/fire-event/:event_name', function(req, res) {
+//   publisherClient.publish( 'updates', ('"' + req.params.event_name + '" page visited') );
+//   res.writeHead(200, {'Content-Type': 'text/html'});
+//   res.write('All clients have received "' + req.params.event_name + '"');
+//   res.end();
+// });
 app.listen(8000);
-console.log("Express server listening on port %d in %s mode", app.address().port, app.settings.env);
+
+console.log("Express server listening on port %d in %s mode",
+  app.address().port, app.settings.env);
+
