@@ -3,11 +3,15 @@
  * Module dependencies.
  */
 
-var express = require('express'),
-    routes  = require('./routes');
+var express = require('express');
+var routes  = require('./routes');
+var redis   = require('redis');
 var prozess = require('prozess');
 
 var app = module.exports = express.createServer();
+
+var USE_REDIS = true;
+var TOPIC = "syslog";
 
 // Configuration
 
@@ -39,18 +43,24 @@ app.get('/update-stream', function(req, res) {
   req.socket.setTimeout(Infinity);
 
   var messageCount = 0;
+  if(USE_REDIS) {
+    console.log("Instantiating Redis subscriber");
+    var subscriber = redis.createClient();
+    subscriber.subscribe(TOPIC);
+  } else {
+    console.log("Instantiating Kafka subscriber");
+    var options = {
+      host : 'localhost',
+      topic : TOPIC,
+      partition : 0,
+      offset : 0,
+      interval: 1000
+    };
 
-  var options = {
-    host : 'localhost',
-    topic : 'syslog',
-    partition : 0,
-    offset : 0,
-    interval: 1000
-  };
-
-  // TODO: Create one EventEmitter per connected browser?!
-  // Should be one per process
-  var subscriber = new prozess.EventEmitter(options);
+    // TODO: Create one EventEmitter per connected browser?!
+    // Should be one per process
+    var subscriber = new prozess.EventEmitter(options);
+  }
 
   console.log("New incoming subscriber");
 
