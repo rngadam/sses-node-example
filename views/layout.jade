@@ -17,19 +17,20 @@ html
       var messageReceived = 0;
       var dropped = 0;
       source.addEventListener('message', function(e) {
+        //console.log(e);
         event = JSON.parse(e.data);
         //if(!event.facility.startsWith('local'))
         //  return;
-        if(event.facility != 'local3')
+        if(event['syslogfacility-text'] != 'local3')
           return;
 
         if(start == null) {
           start = new Date().getTime();
         }
-        //console.log(e);
         messageReceived++;
         var current = new Date().getTime();
         var delta = (current - start);
+
         var messagePerSecond = messageReceived/Math.ceil(delta/1000);
 
         $('p').text(
@@ -40,7 +41,8 @@ html
         $('div.messagePerSecond').text('' + messagePerSecond);
 
         //console.log('messagePerSecond:' + messagePerSecond);
-        data = event.message.split(',').map(function( num ){ return parseFloat( num, 10 ) });
+        data = event.msg.split(',').map(function( num ) {
+          return parseFloat( num, 10 ) });
         //$('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + ')</li>');
         /*$('ul').append(
           '<li>'
