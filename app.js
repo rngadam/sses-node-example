@@ -46,7 +46,7 @@ app.get('/update-stream', function(req, res) {
   if(USE_REDIS) {
     console.log("Instantiating Redis subscriber");
     var subscriber = redis.createClient();
-    subscriber.subscribe(TOPIC);
+    subscriber.psubscribe(TOPIC + ":*");
   } else {
     console.log("Instantiating Kafka subscriber");
     var options = {
@@ -60,6 +60,7 @@ app.get('/update-stream', function(req, res) {
     // TODO: Create one EventEmitter per connected browser?!
     // Should be one per process
     var subscriber = new prozess.EventEmitter(options);
+    subscriber.subscribe(TOPIC);
   }
 
   console.log("New incoming subscriber");
@@ -72,12 +73,23 @@ app.get('/update-stream', function(req, res) {
     console.log("subscriber Error: " + err);
   });
 
-  // When we receive a message from the redis connection
-  subscriber.on("message", function(channel, message) {
+  function handleMessage(channel, message) {
     messageCount++; // Increment our message count
-
+    if(messageCount%10000 == 0) {
+      console.log('' + messageCount + ' messages received')
+    }
+    //console.log('message received ' + channel + ' message: ' + message);
     res.write('id: ' + messageCount + '\n');
     res.write("data: " + message + '\n\n'); // Note the extra newline
+  }
+  // When we receive a message from the redis connection
+  subscriber.on("message", function(channel, message) {
+    handleMessage(channel, message);
+  });
+
+  // When we receive a message from the redis connection
+  subscriber.on("pmessage", function(pattern, channel, message) {
+    handleMessage(channel, message);
   });
 
   //send headers for event-stream connection
@@ -107,6 +119,9 @@ app.get('/update-stream', function(req, res) {
 // });
 app.listen(8000);
 
-console.log("Express server listening on port %d in %s mode",
-  app.address().port, app.settings.env);
+app.on('listening', function() {
+  console.log("Tradesparq Express server listening on port %d in %s mode",
+    app.address().port, app.settings.env);
+});
+
 
