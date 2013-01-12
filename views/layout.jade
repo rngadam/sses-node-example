@@ -32,7 +32,7 @@ html
         if(messageReceived != 0 && (current - lastMessageTime) > 1000) {
           console.log('resetting...');
           console.log('last test ' + msg);
-          $('ul').append('<li>' + msg + ')</li>');
+          $('ul').append('<li>' + msg + '</li>');
           start = current;
           messageReceived = 0;
           outOfSequence = 0;
@@ -43,6 +43,12 @@ html
       source.addEventListener('message', function(e) {
         //console.log(e);
         event = JSON.parse(e.data);
+
+        // we're starting a new test...
+        if(messageReceived == 0) {
+          start = new Date().getTime();
+        }
+
         lastMessageTime =  new Date().getTime();
 
         messageReceived++;
