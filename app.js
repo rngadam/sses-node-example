@@ -42,7 +42,7 @@ app.get('/update-stream', function(req, res) {
   // let request last as long as possible
   req.socket.setTimeout(Infinity);
 
-  var messageCount = 0;
+  var messageReceived = 0;
   if(USE_REDIS) {
     console.log("Instantiating Redis subscriber");
     var subscriber = redis.createClient();
@@ -73,13 +73,23 @@ app.get('/update-stream', function(req, res) {
     console.log("subscriber Error: " + err);
   });
 
+  var startTime = 0;
+  var BATCH_SIZE = 10000;
   function handleMessage(channel, message) {
-    messageCount++; // Increment our message count
-    if(messageCount%10000 == 0) {
-      console.log('' + messageCount + ' messages received')
+    messageReceived++; // Increment our message count
+    if(startTime == 0) {
+      startTime = new Date().getTime();
+    }
+    if(messageReceived % BATCH_SIZE == 0) {
+      var currentTime = new Date().getTime();
+      var messagePerSecond = BATCH_SIZE / ((currentTime - startTime)/1000);
+      var msg ='messageReceived ' + messageReceived
+        + ' messagePerSecond ' + messagePerSecond.toFixed(2);
+      console.log(msg);
+      startTime = currentTime;
     }
     //console.log('message received ' + channel + ' message: ' + message);
-    res.write('id: ' + messageCount + '\n');
+    res.write('id: ' + messageReceived + '\n');
     res.write("data: " + message + '\n\n'); // Note the extra newline
   }
   // When we receive a message from the redis connection
