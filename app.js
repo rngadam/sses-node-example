@@ -46,7 +46,7 @@ app.get('/update-stream', function(req, res) {
   if(USE_REDIS) {
     console.log("Instantiating Redis subscriber");
     var subscriber = redis.createClient();
-    subscriber.psubscribe(TOPIC + ":*");
+    subscriber.psubscribe(TOPIC + ":local*");
   } else {
     console.log("Instantiating Kafka subscriber");
     var options = {

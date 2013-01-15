@@ -8,71 +8,7 @@ html
 
     script(src='http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js')
     script(src='http://jquery-json.googlecode.com/files/jquery.json-2.2.min.js')
+    script(src='/js/benchmark.js')
     script(type='text/javascript')
-      String.prototype.startsWith = function(str) {return (this.match("^"+str)==str)}
-      var source = new EventSource('/update-stream');
-      var lastCounter = null;
-      var lastTime = null;
-      var start = null;
-      var lastMessageTime = 0;
-      var messageReceived = 0;
-      var outOfSequence = 0;
-      setInterval(function() {
-        if(start == null) {
-          start = new Date().getTime();
-        }
-        var current = new Date().getTime();
-        var delta = (current - start);
+      startBenchmark()
 
-        var messagePerSecond = messageReceived/Math.ceil(delta/1000);
-        var msg = 'messageReceived ' + messageReceived
-          + ' messagePerSecond ' + messagePerSecond.toFixed(2)
-          + ' outOfSequence ' + outOfSequence;
-        $('p').text(msg);
-        if(messageReceived != 0 && (current - lastMessageTime) > 1000) {
-          console.log('resetting...');
-          console.log('last test ' + msg);
-          $('ul').append('<li>' + msg + '</li>');
-          start = current;
-          messageReceived = 0;
-          outOfSequence = 0;
-        }
-
-      }, 1000);
-
-      source.addEventListener('message', function(e) {
-        //console.log(e);
-        event = JSON.parse(e.data);
-
-        // we're starting a new test...
-        if(messageReceived == 0) {
-          start = new Date().getTime();
-        }
-
-        lastMessageTime =  new Date().getTime();
-
-        messageReceived++;
-        //console.log('messagePerSecond:' + messagePerSecond);
-        data = event.msg.split(',').map(function( num ) {
-          return parseFloat( num, 10 ) });
-        //$('ul').append('<li>' + e.data + ' (message id: ' + e.lastEventId + '</li>');
-        /*$('ul').append(
-          '<li>'
-          + event.message
-          + ' counter '
-          + data[0]
-          + ' (message id: '
-          + e.lastEventId
-          + ')</li>');*/
-        if(lastCounter>0) {
-          if( (data[0] - lastCounter) == 1) {
-            //console.log("sequential");
-          } else {
-            //console.log("not sequential, expected " + (lastCounter + 1) + " got " + data[0]);
-            outOfSequence++;
-          }
-        }
-        lastCounter = data[0];
-        lastTime = data[1];
-
-      }, false);
